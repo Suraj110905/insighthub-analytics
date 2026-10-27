@@ -93,3 +93,36 @@ test("Auth 6: Sanitizes user emails to lowercase and trims whitespace", () => {
   assert.equal(sanitizeEmail("  Analyst@Company.COM  "), "analyst@company.com");
   assert.equal(sanitizeEmail("user@insighthub.in"), "user@insighthub.in");
 });
+
+test("Auth 7: Resolves both NEXT_PUBLIC_AWS_COGNITO_* and NEXT_PUBLIC_COGNITO_* naming aliases", () => {
+  const resolveCognitoConfig = (env) => {
+    const userPoolId = env.NEXT_PUBLIC_AWS_COGNITO_USER_POOL_ID || env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || "";
+    const clientId = env.NEXT_PUBLIC_AWS_COGNITO_CLIENT_ID || env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "";
+    return {
+      userPoolId,
+      clientId,
+      isConfigured: Boolean(
+        userPoolId &&
+        clientId &&
+        userPoolId !== "ap-south-1_xxxxxxxxx" &&
+        clientId !== "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ),
+    };
+  };
+
+  // Test standard prefix
+  const res1 = resolveCognitoConfig({
+    NEXT_PUBLIC_AWS_COGNITO_USER_POOL_ID: "ap-south-1_TestPool1",
+    NEXT_PUBLIC_AWS_COGNITO_CLIENT_ID: "client-id-1",
+  });
+  assert.equal(res1.isConfigured, true);
+  assert.equal(res1.userPoolId, "ap-south-1_TestPool1");
+
+  // Test alias prefix
+  const res2 = resolveCognitoConfig({
+    NEXT_PUBLIC_COGNITO_USER_POOL_ID: "ap-south-1_TestPool2",
+    NEXT_PUBLIC_COGNITO_CLIENT_ID: "client-id-2",
+  });
+  assert.equal(res2.isConfigured, true);
+  assert.equal(res2.userPoolId, "ap-south-1_TestPool2");
+});

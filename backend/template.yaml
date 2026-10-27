@@ -56,22 +56,21 @@ Resources:
         - email
       UsernameAttributes:
         - email
-      PasswordPolicy:
-        MinimumLength: 8
-        RequireLowercase: true
-        RequireNumbers: true
-        RequireSymbols: true
-        RequireUppercase: true
-        TemporaryPasswordValidityDays: 7
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 7
       MfaConfiguration: "OFF"
       UserAttributeUpdateSettings:
         AttributesRequireVerificationBeforeUpdate:
           - email
-      Tags:
-        - Key: Project
-          Value: InsightHub
-        - Key: Environment
-          Value: !Ref Environment
+      UserPoolTags:
+        Project: InsightHub
+        Environment: !Ref Environment
 
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient

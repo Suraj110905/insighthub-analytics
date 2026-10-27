@@ -49,7 +49,9 @@ test("SAM Template: structure and security rules validation", () => {
   assert.ok(content.includes("AWS::Cognito::UserPool"), "Must declare AWS::Cognito::UserPool resource");
   assert.ok(content.includes("AWS::Cognito::UserPoolClient"), "Must declare AWS::Cognito::UserPoolClient resource");
   assert.ok(content.includes("GenerateSecret: false"), "Client must not generate client secret (SPA Next.js)");
+  assert.ok(content.includes("PasswordPolicy:"), "Must configure PasswordPolicy under UserPool Policies");
   assert.ok(content.includes("MinimumLength: 8"), "Must configure secure password minimum length");
+  assert.ok(content.includes("UserPoolTags:"), "Must configure UserPoolTags on Cognito UserPool");
 
   // 8. API Gateway Cognito Authorizer
   assert.ok(content.includes("DefaultAuthorizer: CognitoAuthorizer"), "API Gateway must set CognitoAuthorizer as default");

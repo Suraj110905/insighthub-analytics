@@ -1,0 +1,14 @@
+{
+  "name": "insighthub-backend-runtime",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "InsightHub Lambda runtime dependencies",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.758.0",
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/lib-dynamodb": "^3.758.0",
+    "@aws-sdk/s3-presigned-post": "^3.1158.0",
+    "@aws-sdk/s3-request-presigner": "^3.758.0"
+  }
+}
