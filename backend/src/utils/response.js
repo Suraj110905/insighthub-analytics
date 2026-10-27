@@ -54,6 +54,20 @@ export function badRequest(message = "Invalid request payload", details = null) 
   });
 }
 
+export function unauthorized(message = "Authentication required. Missing or invalid token.") {
+  return buildResponse(401, {
+    error: "Unauthorized",
+    message,
+  });
+}
+
+export function forbidden(message = "Access denied. Insufficient permissions.") {
+  return buildResponse(403, {
+    error: "Forbidden",
+    message,
+  });
+}
+
 export function notFound(message = "Resource not found") {
   return buildResponse(404, {
     error: "NotFound",
@@ -67,3 +81,4 @@ export function serverError(message = "Internal server error") {
     message,
   });
 }
+

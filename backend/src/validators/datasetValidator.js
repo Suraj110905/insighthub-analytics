@@ -2,11 +2,24 @@
  * Input validation for dataset metadata and file upload requests.
  */
 
-const MAX_CSV_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit
+export const MAX_CSV_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit
 const SAFE_FILENAME_REGEX = /^[a-zA-Z0-9_\-. ]+\.csv$/i;
+const DATASET_ID_REGEX = /^ds_[a-zA-Z0-9_\-]{8,64}$/;
+
+/**
+ * Validates a dataset identifier string.
+ *
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function validateDatasetId(id) {
+  if (!id || typeof id !== "string") return false;
+  return DATASET_ID_REGEX.test(id.trim());
+}
 
 /**
  * Validates request payload for creating dataset metadata records.
+ * Note: Never accepts userId from payload; caller must supply verified userId from authorizer.
  *
  * @param {object} payload
  * @returns {{ valid: boolean, errors: Array<string>, sanitized?: object }}
@@ -96,6 +109,14 @@ export function validatePresignedUrlInput(payload) {
     errors.push(`'fileSizeBytes' exceeds the 10MB limit (${MAX_CSV_SIZE_BYTES} bytes).`);
   }
 
+  // Content type validation (if provided)
+  if (payload.contentType && typeof payload.contentType === "string") {
+    const ct = payload.contentType.trim().toLowerCase();
+    if (ct !== "text/csv" && ct !== "application/vnd.ms-excel" && ct !== "text/plain") {
+      errors.push("Invalid 'contentType'. Only CSV uploads ('text/csv') are supported.");
+    }
+  }
+
   if (errors.length > 0) {
     return { valid: false, errors };
   }
@@ -105,6 +126,8 @@ export function validatePresignedUrlInput(payload) {
     sanitized: {
       filename,
       fileSizeBytes,
+      contentType: "text/csv",
     },
   };
 }
+

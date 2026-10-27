@@ -21,14 +21,23 @@ The system is structured as a modern web application designed for seamless serve
    ├── 🎨 Dashboard Components (MetricCard, RevenueChart, ChannelChart, TransactionsTable)
    └── 🌐 Next.js Pages & Layouts (app/layout.js, app/page.js)
    │
-   ▼ (Prepared AWS SAM Backend - Phase 4A)
-🌐 Amazon API Gateway (REST Endpoints in ap-south-1: /health, /datasets, /datasets/{id}, /datasets/presigned-url)
+   ▼ (Prepared AWS SAM Backend - Phase 4B)
+🔐 Amazon Cognito User Pool (ap-south-1)
+   │
+   ▼
+🌐 Amazon API Gateway (REST Endpoints with Cognito Authorizer)
+   ├── GET  /health (Public)
+   ├── POST /datasets (Protected)
+   ├── GET  /datasets (Protected)
+   ├── GET  /datasets/{id} (Protected - Anti-IDOR)
+   └── POST /datasets/presigned-url (Protected - 10MB S3 Policy)
    │
    ▼
 ⚡ AWS Lambda Handlers (Node.js 24.x, ARM64)
    │
-   ├── 🗄️ Amazon DynamoDB (DatasetsTable, On-Demand billing)
-   └── 💾 Amazon S3 (CsvStorageBucket, Private Encrypted, 90-day lifecycle)
+   ├── 🗄️ Amazon DynamoDB (DatasetsTable, On-Demand, Composite Key: userId HASH + id RANGE)
+   ├── 💾 Amazon S3 (CsvStorageBucket, Private Encrypted, 10MB Presigned POST, 90-day lifecycle)
+   └── 🪵 Amazon CloudWatch Logs (Explicit 14-day retention for cost control)
 ```
 
 ---
@@ -47,7 +56,7 @@ insighthub/
 │   │   ├── handlers/     # Lambda handlers (health, createDataset, listDatasets, getDataset, getPresignedUrl)
 │   │   ├── utils/        # Response helpers and CORS configuration
 │   │   └── validators/   # Strict dataset metadata and file upload validators
-│   ├── tests/            # Zero-dependency backend test suite (12 tests)
+│   ├── tests/            # Zero-dependency backend test suite (19 tests)
 │   ├── package.json      # Backend AWS SDK dependencies
 │   ├── samconfig.toml.example # Example non-secret SAM deploy configuration
 │   ├── template.yaml     # SAM CloudFormation serverless infrastructure template

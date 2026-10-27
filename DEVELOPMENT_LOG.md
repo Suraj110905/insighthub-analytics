@@ -102,7 +102,25 @@
 - Frontend ESLint: `npm run lint` passed with **0 errors and 0 warnings**.
 - Frontend Build: `npm run build` compiled in 735ms with **0 errors**.
 
-### ⚠️ Security Limitations & Important Notes
-- **Deployment Status**: Backend code is **prepared locally only**; **NO deployment has been performed**, respecting strict project constraints.
-- **Authentication**: Endpoints currently do not enforce Cognito/OAuth authentication. An API Gateway Lambda Authorizer or Cognito User Pool is **mandatory** before deploying to production with real enterprise data.
-- **Client Independence**: Frontend remains 100% operational in client-side mode without requiring backend connectivity.
+---
+
+## 📅 Phase 4B: Authentication, Data Isolation & Cost Controls
+
+### 🎯 Objectives Completed
+- **CloudWatch Log Retention**: Added explicit `AWS::Logs::LogGroup` resources with `RetentionInDays: 14` for all 5 Lambda functions to prevent unmanaged storage accumulation.
+- **Amazon Cognito Integration**: Added `AWS::Cognito::UserPool` and `AWS::Cognito::UserPoolClient` with secure defaults (`GenerateSecret: false`, password policy, SRP + refresh flows).
+- **API Gateway Authorizer**: Configured `CognitoAuthorizer` as default REST API authorizer. Kept `GET /health` public with `Authorizer: NONE`.
+- **Tenant Data Isolation & Anti-IDOR**:
+  - Identity strictly derived from verified JWT `event.requestContext.authorizer.claims.sub`.
+  - DynamoDB table schema updated to composite primary key: `userId` (HASH) + `id` (RANGE).
+  - Replaced full-table scans with partition-scoped `QueryCommand` for `/datasets`.
+  - Cross-user access denial on `/datasets/{id}` returning `404 Not Found` without information leakage.
+- **Strict S3 10MB Limit**: Integrated `@aws-sdk/s3-presigned-post` generating presigned POST policies with `['content-length-range', 1, 10485760]` and user-scoped S3 prefixes (`uploads/${userId}/...`). S3 directly rejects uploads > 10MB.
+- **Local Dev Compatibility**: Frontend remains 100% operational offline (`NEXT_PUBLIC_ENABLE_AWS_BACKEND=false`). Created `lib/awsClient.js` for clean abstraction.
+- **Test Verification**:
+  - Backend Unit Tests: 19/19 passing (261ms) across all handlers, validators, anti-IDOR tests, and template validation.
+  - Frontend Unit Tests: 8/8 passing.
+  - ESLint: 0 errors, 0 warnings.
+  - Next.js Production Build: Compiled and prerendered in 690ms with 0 errors.
+- **Safety**: Zero AWS resources deployed or modified.
+

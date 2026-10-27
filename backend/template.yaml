@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   InsightHub Serverless Backend
-  Minimal business analytics backend using AWS Lambda, API Gateway, DynamoDB, and Amazon S3.
+  Minimal business analytics backend using AWS Lambda, API Gateway, Cognito, DynamoDB, and Amazon S3.
 
 Parameters:
   Environment:
@@ -39,11 +39,59 @@ Globals:
         S3_BUCKET_NAME: !Ref CsvStorageBucket
         FRONTEND_ORIGIN: !Ref FrontendOrigin
         PRESIGNED_URL_EXPIRY: !Ref PresignedUrlExpirySeconds
+        ENVIRONMENT: !Ref Environment
         NODE_OPTIONS: "--enable-source-maps"
 
 Resources:
   # ============================================================================
-  # API GATEWAY REST API
+  # AMAZON COGNITO - USER AUTHENTICATION
+  # ============================================================================
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AWS::StackName}-UserPool"
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      PasswordPolicy:
+        MinimumLength: 8
+        RequireLowercase: true
+        RequireNumbers: true
+        RequireSymbols: true
+        RequireUppercase: true
+        TemporaryPasswordValidityDays: 7
+      MfaConfiguration: "OFF"
+      UserAttributeUpdateSettings:
+        AttributesRequireVerificationBeforeUpdate:
+          - email
+      Tags:
+        - Key: Project
+          Value: InsightHub
+        - Key: Environment
+          Value: !Ref Environment
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${AWS::StackName}-WebClient"
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+      PreventUserExistenceErrors: ENABLED
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+
+  # ============================================================================
+  # API GATEWAY REST API WITH COGNITO AUTHORIZER
   # ============================================================================
   InsightHubApi:
     Type: AWS::Serverless::Api
@@ -54,9 +102,17 @@ Resources:
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
         AllowOrigin: !Sub "'${FrontendOrigin}'"
         MaxAge: "'3600'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt UserPool.Arn
+            Identity:
+              Header: Authorization
 
   # ============================================================================
-  # DYNAMODB TABLE - METADATA STORAGE
+  # DYNAMODB TABLE - MULTI-TENANT ISOLATED METADATA STORAGE
+  # Composite Key: userId (HASH) + id (RANGE) enforces tenant data isolation
   # ============================================================================
   DatasetsTable:
     Type: AWS::DynamoDB::Table
@@ -64,11 +120,15 @@ Resources:
       TableName: !Sub "${AWS::StackName}-Datasets"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
         - AttributeName: id
           AttributeType: S
       KeySchema:
-        - AttributeName: id
+        - AttributeName: userId
           KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
       SSESpecification:
         SSEEnabled: true
       PointInTimeRecoverySpecification:
@@ -85,7 +145,6 @@ Resources:
   CsvStorageBucket:
     Type: AWS::S3::Bucket
     Properties:
-      # Omit BucketName so CloudFormation generates a collision-free global name
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -107,6 +166,7 @@ Resources:
           - AllowedHeaders:
               - "*"
             AllowedMethods:
+              - POST
               - PUT
               - GET
             AllowedOrigins:
@@ -119,16 +179,51 @@ Resources:
           Value: !Ref Environment
 
   # ============================================================================
+  # CLOUDWATCH LOG GROUPS (EXPLICIT 14-DAY RETENTION FOR COST CONTROL)
+  # ============================================================================
+  HealthFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-HealthFunction"
+      RetentionInDays: 14
+
+  CreateDatasetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-CreateDatasetFunction"
+      RetentionInDays: 14
+
+  ListDatasetsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-ListDatasetsFunction"
+      RetentionInDays: 14
+
+  GetDatasetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-GetDatasetFunction"
+      RetentionInDays: 14
+
+  GetPresignedUrlFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-GetPresignedUrlFunction"
+      RetentionInDays: 14
+
+  # ============================================================================
   # LAMBDA FUNCTIONS
   # ============================================================================
 
-  # 1. Health Check
+  # 1. Health Check (Public - Unauthenticated)
   HealthFunction:
     Type: AWS::Serverless::Function
+    DependsOn: HealthFunctionLogGroup
     Properties:
+      FunctionName: !Sub "${AWS::StackName}-HealthFunction"
       CodeUri: src/
       Handler: handlers/health.handler
-      Description: Simple service health check endpoint
+      Description: Simple public service health check endpoint
       Events:
         HealthApi:
           Type: Api
@@ -136,14 +231,18 @@ Resources:
             RestApiId: !Ref InsightHubApi
             Path: /health
             Method: GET
+            Auth:
+              Authorizer: NONE
 
-  # 2. Create Dataset Metadata
+  # 2. Create Dataset Metadata (Protected by Cognito Authorizer)
   CreateDatasetFunction:
     Type: AWS::Serverless::Function
+    DependsOn: CreateDatasetFunctionLogGroup
     Properties:
+      FunctionName: !Sub "${AWS::StackName}-CreateDatasetFunction"
       CodeUri: src/
       Handler: handlers/createDataset.handler
-      Description: Validates and stores dataset metadata summary in DynamoDB
+      Description: Validates and stores tenant-isolated dataset metadata in DynamoDB
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DatasetsTable
@@ -155,13 +254,15 @@ Resources:
             Path: /datasets
             Method: POST
 
-  # 3. List Datasets Metadata
+  # 3. List Datasets Metadata (Protected by Cognito Authorizer)
   ListDatasetsFunction:
     Type: AWS::Serverless::Function
+    DependsOn: ListDatasetsFunctionLogGroup
     Properties:
+      FunctionName: !Sub "${AWS::StackName}-ListDatasetsFunction"
       CodeUri: src/
       Handler: handlers/listDatasets.handler
-      Description: Lists stored dataset metadata records
+      Description: Lists dataset metadata records belonging to the authenticated user
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref DatasetsTable
@@ -173,13 +274,15 @@ Resources:
             Path: /datasets
             Method: GET
 
-  # 4. Get Single Dataset Metadata
+  # 4. Get Single Dataset Metadata (Protected by Cognito Authorizer)
   GetDatasetFunction:
     Type: AWS::Serverless::Function
+    DependsOn: GetDatasetFunctionLogGroup
     Properties:
+      FunctionName: !Sub "${AWS::StackName}-GetDatasetFunction"
       CodeUri: src/
       Handler: handlers/getDataset.handler
-      Description: Retrieves metadata for a single dataset by ID
+      Description: Retrieves metadata for a single dataset by ID with tenant isolation
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref DatasetsTable
@@ -191,13 +294,15 @@ Resources:
             Path: /datasets/{id}
             Method: GET
 
-  # 5. S3 Presigned URL Generator
+  # 5. S3 Presigned POST Generator (Protected by Cognito Authorizer)
   GetPresignedUrlFunction:
     Type: AWS::Serverless::Function
+    DependsOn: GetPresignedUrlFunctionLogGroup
     Properties:
+      FunctionName: !Sub "${AWS::StackName}-GetPresignedUrlFunction"
       CodeUri: src/
       Handler: handlers/getPresignedUrl.handler
-      Description: Generates a secure S3 presigned PUT URL for direct browser-to-S3 CSV upload
+      Description: Generates a secure S3 presigned POST policy with 10MB content-length-range enforcement
       Policies:
         - S3WritePolicy:
             BucketName: !Ref CsvStorageBucket
@@ -215,6 +320,22 @@ Outputs:
     Value: !Sub "https://${InsightHubApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
     Export:
       Name: !Sub "${AWS::StackName}-ApiUrl"
+
+  UserPoolId:
+    Description: Amazon Cognito User Pool ID
+    Value: !Ref UserPool
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolId"
+
+  UserPoolClientId:
+    Description: Amazon Cognito User Pool App Client ID
+    Value: !Ref UserPoolClient
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolClientId"
+
+  UserPoolArn:
+    Description: Amazon Cognito User Pool ARN
+    Value: !GetAtt UserPool.Arn
 
   DatasetsTableName:
     Description: Name of the DynamoDB table storing dataset metadata
