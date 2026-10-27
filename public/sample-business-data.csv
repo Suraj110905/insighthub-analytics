@@ -1,0 +1,23 @@
+order_id,customer,date,channel,revenue,status
+ORD-1001,Acme Industrial Corp,2026-01-14,Direct,4250.00,Completed
+ORD-1002,Nova Retail Group,2026-01-22,Organic,1820.50,Completed
+ORD-1003,Starlight Logistics,2026-02-05,Referral,940.00,Processing
+ORD-1004,Apex Healthcare LLC,2026-02-18,Direct,3100.00,Completed
+ORD-1005,Beacon Solutions,2026-03-02,Social,620.00,Pending
+ORD-1006,Crestview Media Labs,2026-03-19,Email,1450.00,Completed
+ORD-1007,Horizon BioTech,2026-04-08,Organic,2890.00,Completed
+ORD-1008,Vanguard Tech Inc,2026-04-24,Direct,5400.00,Completed
+ORD-1009,Silverline Dynamics,2026-05-11,Referral,1780.00,Completed
+ORD-1010,Pacific Cloud Systems,2026-05-27,Direct,3920.00,Completed
+ORD-1011,Summit Financial Group,2026-06-09,Email,2150.00,Processing
+ORD-1012,Redwood Commerce,2026-06-25,Organic,1640.00,Completed
+ORD-1013,Equinox Data Labs,2026-07-04,Social,980.00,Completed
+ORD-1014,Zenith Manufacturing,2026-07-21,Direct,4600.00,Completed
+ORD-1015,Northstar Analytics,2026-08-12,Referral,2400.00,Completed
+ORD-1016,BluePeak Media,2026-08-28,Organic,1350.00,Pending
+ORD-1017,Quantum Logistics,2026-09-07,Direct,5120.00,Completed
+ORD-1018,Orion Retailers,2026-09-23,Email,1890.00,Completed
+ORD-1019,Atlas Health Partners,2026-10-06,Referral,3450.00,Completed
+ORD-1020,Helios Energy Corp,2026-10-18,Direct,6250.00,Completed
+ORD-1021,Ironclad Security,2026-10-22,Organic,2780.00,Completed
+ORD-1022,Terra Nova Foods,2026-10-25,Social,1120.00,Completed

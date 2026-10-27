@@ -11,8 +11,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { CalendarX } from "lucide-react";
 
-const MONTHLY_REVENUE_DATA = [
+const SAMPLE_REVENUE_DATA = [
   { month: "Jan", revenue: 64200, orders: 740 },
   { month: "Feb", revenue: 71500, orders: 810 },
   { month: "Mar", revenue: 68900, orders: 790 },
@@ -32,10 +33,10 @@ function CustomTooltip({ active, payload, label }) {
       <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-md text-xs">
         <p className="font-semibold text-slate-800 mb-1">{label} Performance</p>
         <p className="text-teal-700 font-bold text-sm">
-          ${data.revenue.toLocaleString()}
+          ${(data.revenue || 0).toLocaleString()}
         </p>
         <p className="text-slate-500 mt-0.5">
-          {data.orders.toLocaleString()} orders
+          {(data.orders || 0).toLocaleString()} orders
         </p>
       </div>
     );
@@ -43,9 +44,11 @@ function CustomTooltip({ active, payload, label }) {
   return null;
 }
 
-export default function RevenueChart() {
+export default function RevenueChart({ data = null, isCustom = false }) {
   const isMounted = useIsClient();
   const [metricView, setMetricView] = useState("revenue");
+
+  const chartData = data !== null ? data : SAMPLE_REVENUE_DATA;
 
   if (!isMounted) {
     return (
@@ -55,14 +58,36 @@ export default function RevenueChart() {
     );
   }
 
+  // Handle case where custom CSV was uploaded but lacks date column
+  if (isCustom && chartData.length === 0) {
+    return (
+      <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs h-84 flex flex-col items-center justify-center text-center">
+        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
+          <CalendarX className="w-5 h-5" />
+        </div>
+        <h4 className="text-xs font-bold text-slate-700">Date Dimension Unavailable</h4>
+        <p className="text-[11px] text-slate-500 max-w-xs mt-1">
+          The uploaded dataset does not contain an identified Date column (e.g. &apos;date&apos;, &apos;order_date&apos;). Timeline grouping is unavailable.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs flex flex-col justify-between">
       {/* Chart Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h3 className="text-sm font-bold text-slate-800">Revenue Trends</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-800">Revenue Trends</h3>
+            {isCustom && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60">
+                Uploaded Data
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Monthly gross revenue and performance trajectory
+            {isCustom ? "Chronological revenue aggregation from uploaded records" : "Monthly gross revenue and performance trajectory"}
           </p>
         </div>
 
@@ -95,7 +120,7 @@ export default function RevenueChart() {
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            data={MONTHLY_REVENUE_DATA}
+            data={chartData}
             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
           >
             <defs>
@@ -118,7 +143,7 @@ export default function RevenueChart() {
               tickLine={false}
               axisLine={false}
               tickFormatter={(val) =>
-                metricView === "revenue" ? `$${val / 1000}k` : val
+                metricView === "revenue" ? `$${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}` : val
               }
             />
             <Tooltip content={<CustomTooltip />} />

@@ -6,12 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node scripts/test-analytics.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "lucide-react": "^1.62.0",
     "next": "16.4.3",
+    "papaparse": "^5.7.0",
     "postcss": "^8.5.32",
     "react": "19.3.0",
     "react-dom": "19.3.0",
