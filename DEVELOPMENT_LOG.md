@@ -142,4 +142,31 @@
   - Production Build: Compiled and prerendered in 2.6s with 0 errors.
 - **Safety Compliance**: Zero AWS resources created, modified, or deployed. Zero commits made automatically.
 
+---
+
+## 📅 Phase 5B: End-to-End AWS Dataset Upload Integration
+
+### 🎯 Objectives Completed
+- **3-Stage Cloud Upload Pipeline**: Implemented in `lib/awsClient.js`:
+  1. Requests S3 Presigned POST policy from `POST /datasets/presigned-url` attaching Cognito ID token as Bearer authorization.
+  2. Uploads raw CSV bytes directly to private S3 via multipart form data, strictly enforcing the 10 MB limit and text/csv without passing bytes through Lambda memory.
+  3. Saves dataset metadata summary in DynamoDB via `POST /datasets` using the backend-generated `s3Key`.
+- **Partial Failure Detection**: Added custom `CloudUploadError` with `isPartialFailure: true` and `s3Key`. If S3 upload succeeds but DynamoDB metadata creation fails, the UI reports the partial failure clearly rather than claiming success or blindly creating duplicates.
+- **UI Integration in UploadModal**:
+  - Connected `components/UploadModal.js` to `lib/awsClient.js` with dynamic cloud upload toggle when authenticated.
+  - Step-by-step progress indicator ("Requesting S3 upload policy..." -> "Uploading CSV directly to private Amazon S3..." -> "Saving dataset metadata in DynamoDB...").
+  - Clear guidance banner and sign-in button when cloud storage is enabled on the instance but user is not authenticated.
+- **Offline & Local Analytics Parity**:
+  - Offline mode functions 100% in browser memory with zero network requests when AWS mode is disabled or unconfigured.
+  - Clearly distinguishes local session datasets from AWS cloud-synchronized datasets with UI badges (`Saved to AWS Cloud` vs `Local Session`).
+- **Phase 5C Boundary**: Explicitly documented that historical dataset browsing and reopening from S3 is scheduled for Phase 5C.
+- **Comprehensive Unit Testing**:
+  - Added `scripts/test-cloud-upload.mjs` with 10 unit tests covering presigned POST, S3 multipart uploads, DynamoDB metadata creation, partial failure detection, 10MB limits, and offline mode.
+  - Total Frontend Tests: 24/24 passing (8 analytics + 6 auth + 10 cloud upload).
+  - Total Backend Tests: 19/19 passing.
+  - ESLint: 0 errors, 0 warnings.
+  - Next.js Production Build: Compiled in 2.3s with 0 errors.
+- **Safety Compliance**: Zero AWS resources created, modified, or deployed. Zero commits made automatically.
+
+
 

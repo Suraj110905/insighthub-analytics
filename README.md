@@ -82,7 +82,8 @@ insighthub/
 │   └── sample-business-data.csv # Built-in template dataset for 1-click testing
 ├── scripts/              # Automated verification and tests
 │   ├── test-analytics.mjs# Unit tests for CSV parsing, column mapping, and KPI formulas
-│   └── test-auth.mjs     # Unit tests for in-memory storage, token safety & Cognito validation
+│   ├── test-auth.mjs     # Unit tests for in-memory storage, token safety & Cognito validation
+│   └── test-cloud-upload.mjs # Unit tests for S3 presigned POST, upload pipeline & partial failures
 
 ├── .env.example          # Environment variable template with security guidelines
 ├── .gitignore            # Git exclusion rules (protects credentials, SAM artifacts & outputs)

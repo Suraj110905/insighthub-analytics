@@ -23,7 +23,9 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   RotateCcw,
+  Cloud,
 } from "lucide-react";
+
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -115,14 +117,25 @@ export default function DashboardPage() {
                       <span className="font-bold text-teal-900 flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-teal-700" />
                         Active Dataset: {customDataset.filename}
+                        {customDataset.cloud?.isCloud ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800 border border-teal-300">
+                            <Cloud className="w-3 h-3 text-teal-700" />
+                            Saved to AWS Cloud
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                            Local Session
+                          </span>
+                        )}
                       </span>
                       <p className="text-teal-700 text-[11px] mt-0.5">
                         {customDataset.validRowCount.toLocaleString()} records parsed
                         {customDataset.skippedRowCount > 0 &&
                           ` • ${customDataset.skippedRowCount} skipped`}
-                        {" "}• Client-side analytics active
+                        {customDataset.cloud?.s3Key && ` • S3: ${customDataset.cloud.s3Key}`}
                       </p>
                     </div>
+
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -326,7 +339,26 @@ export default function DashboardPage() {
                         <p className="text-xs text-slate-600 mt-1">
                           {customDataset.validRowCount.toLocaleString()} valid records • {customDataset.headers.length} headers detected
                         </p>
+                        {customDataset.cloud?.isCloud ? (
+                          <div className="mt-2 text-[11px] text-teal-800 bg-teal-100/70 p-2 rounded-lg border border-teal-200">
+                            <span className="font-semibold flex items-center gap-1">
+                              <Cloud className="w-3 h-3 text-teal-700" />
+                              AWS Cloud Synchronized
+                            </span>
+                            <span className="font-mono text-[10px] block text-teal-700 truncate mt-0.5">
+                              S3 Key: {customDataset.cloud.s3Key}
+                            </span>
+                            <span className="text-[10px] text-slate-500 block mt-1">
+                              Notice: Historical cloud dataset browsing and reopening from S3 is scheduled for Phase 5C.
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-slate-500 mt-1">
+                            Storage: Local browser memory only (Not synchronized with AWS).
+                          </p>
+                        )}
                       </div>
+
                       <span className="inline-flex items-center gap-1 text-xs text-teal-700 font-semibold bg-white border border-teal-200 px-3 py-1 rounded-full">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Calculated
