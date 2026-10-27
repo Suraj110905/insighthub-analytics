@@ -11,8 +11,8 @@ The system is structured as a modern web application designed for seamless serve
 ```
 📱 Client (Next.js App Router Frontend)
    │
-   ├── 🎨 UI Components (components/MetricCard.js, etc.)
-   ├── ⚙️ Client-side CSV Parser & Formula Helpers (lib/analytics.js)
+   ├── 🎨 UI Components (Sidebar, Header, MetricCard, RevenueChart, ChannelChart, TransactionsTable, UploadModal)
+   ├── ⚙️ Client-side Helpers & Hooks (lib/analytics.js, lib/useIsClient.js)
    └── 🌐 Next.js Pages & Layouts (app/layout.js, app/page.js)
    │
    ▼ (Future Phase Cloud Services)
@@ -33,18 +33,26 @@ The system is structured as a modern web application designed for seamless serve
 insighthub/
 ├── app/                  # Next.js App Router pages, layout, and global styling
 │   ├── favicon.ico       # Website favicon
-│   ├── globals.css       # Global CSS with Tailwind setup & custom tokens
+│   ├── globals.css       # Global CSS with Tailwind v4 setup & custom tokens
 │   ├── layout.js         # Root HTML layout and metadata wrapper
-│   └── page.js           # Main dashboard homepage
-├── components/           # Reusable UI elements (cards, buttons, modal dialogs)
-│   └── MetricCard.js     # Card component for business KPIs
+│   └── page.js           # Interactive Phase 2 dashboard homepage
+├── components/           # Reusable UI elements
+│   ├── Sidebar.js        # Responsive navigation drawer (Overview, Datasets, Reports, Settings)
+│   ├── Header.js         # Header with breadcrumbs, search, notification popover & profile
+│   ├── MetricCard.js     # Modular business KPI cards with trend indicators
+│   ├── RevenueChart.js   # Recharts AreaChart for monthly revenue & order volume
+│   ├── ChannelChart.js   # Recharts BarChart for acquisition channel distribution
+│   ├── TransactionsTable.js # Data table with real-time search, status filter & pagination
+│   └── UploadModal.js    # Interactive CSV upload modal with drag-and-drop dropzone
 ├── lib/                  # Business logic and helper functions
-│   └── analytics.js      # Statistical formulas and data formatting
+│   ├── analytics.js      # Statistical summary formulas and currency formatters
+│   └── useIsClient.js    # Client-side hydration hook (avoids cascading render warnings)
 ├── public/               # Static assets (images, icons, sample data)
 ├── .env.example          # Environment variable template with security guidelines
 ├── .gitignore            # Git exclusion rules (protects credentials & outputs)
 ├── DEVELOPMENT_LOG.md    # Log of tasks completed, testing results, and issues
-├── next.config.mjs       # Next.js configuration (JavaScript)
+├── jsconfig.json         # Path aliases configuration (@/*)
+├── next.config.mjs       # Next.js configuration (JavaScript, Turbopack root)
 ├── package.json          # Dependencies and npm scripts
 ├── postcss.config.mjs    # PostCSS configuration for Tailwind CSS
 └── README.md             # Project documentation (this file)
@@ -58,8 +66,8 @@ insighthub/
 | :--- | :--- | :--- |
 | **Framework** | Next.js 16 (App Router) | React web application framework |
 | **Language** | JavaScript (ES6+) | Clean, beginner-friendly code without build complexity |
-| **Styling** | Tailwind CSS v4 & PostCSS | Minimal, restrained dashboard styling |
-| **Charts** | Recharts | Interactive SVG bar charts, line graphs, and pie charts |
+| **Styling** | Tailwind CSS v4 & PostCSS | Minimal, restrained dashboard styling inspired by Figma |
+| **Charts** | Recharts | Interactive SVG area charts and bar charts |
 | **Icons** | Lucide React | Clean, lightweight UI icons |
 | **Backend (Target)** | AWS API Gateway & Lambda | Serverless API computation |
 | **Storage (Target)** | Amazon DynamoDB & S3 | Key-value metric store and CSV file repository |
@@ -83,7 +91,6 @@ Make sure the following tools are installed on your computer:
    ```
 
 2. **Verify dependencies:**
-   Dependencies have been configured. To reinstall or update:
    ```bash
    npm install
    ```
