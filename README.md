@@ -21,22 +21,23 @@ The system is structured as a modern web application designed for seamless serve
    ├── 🎨 Dashboard Components (MetricCard, RevenueChart, ChannelChart, TransactionsTable)
    └── 🌐 Next.js Pages & Layouts (app/layout.js, app/page.js)
    │
-   ▼ (Prepared AWS SAM Backend - Phase 4B)
+   ▼ (Prepared AWS SAM Backend - Phases 4B & 5C)
 🔐 Amazon Cognito User Pool (ap-south-1)
    │
    ▼
 🌐 Amazon API Gateway (REST Endpoints with Cognito Authorizer)
    ├── GET  /health (Public)
    ├── POST /datasets (Protected)
-   ├── GET  /datasets (Protected)
+   ├── GET  /datasets (Protected - User Scoped)
    ├── GET  /datasets/{id} (Protected - Anti-IDOR)
+   ├── GET  /datasets/{id}/download (Protected - 60s Presigned S3 GET)
    └── POST /datasets/presigned-url (Protected - 10MB S3 Policy)
    │
    ▼
 ⚡ AWS Lambda Handlers (Node.js 24.x, ARM64)
    │
    ├── 🗄️ Amazon DynamoDB (DatasetsTable, On-Demand, Composite Key: userId HASH + id RANGE)
-   ├── 💾 Amazon S3 (CsvStorageBucket, Private Encrypted, 10MB Presigned POST, 90-day lifecycle)
+   ├── 💾 Amazon S3 (CsvStorageBucket, Private Encrypted, 10MB Presigned POST, 60s Presigned GET)
    └── 🪵 Amazon CloudWatch Logs (Explicit 14-day retention for cost control)
 ```
 
@@ -83,7 +84,8 @@ insighthub/
 ├── scripts/              # Automated verification and tests
 │   ├── test-analytics.mjs# Unit tests for CSV parsing, column mapping, and KPI formulas
 │   ├── test-auth.mjs     # Unit tests for in-memory storage, token safety & Cognito validation
-│   └── test-cloud-upload.mjs # Unit tests for S3 presigned POST, upload pipeline & partial failures
+│   ├── test-cloud-upload.mjs # Unit tests for S3 presigned POST, upload pipeline & partial failures
+│   └── test-dataset-history.mjs # Unit tests for cloud history listing, 60s secure download & reopening
 
 ├── .env.example          # Environment variable template with security guidelines
 ├── .gitignore            # Git exclusion rules (protects credentials, SAM artifacts & outputs)
@@ -165,9 +167,63 @@ Make sure the following tools are installed on your computer:
 
 ---
 
+## ☁️ Phase 5C: Dataset History, Secure Downloads & Reopening
+
+InsightHub supports end-to-end cloud dataset persistence, secure browsing, and one-click reopening:
+
+### 1. Cloud History Browsing
+- Authenticated users navigate to the **Datasets** tab to view their previously saved datasets.
+- DynamoDB `QueryCommand` scopes strictly to `userId = :sub`, guaranteeing complete tenant data isolation.
+- Displays dataset name, upload timestamp, valid record count, and detected column count.
+- Includes clean loading, error, empty, and retry states.
+
+### 2. Secure 60-Second Presigned Downloads
+- **Protected Endpoint**: `GET /datasets/{id}/download` validated by Cognito Authorizer.
+- **Anti-IDOR Defense**: Looks up composite key `{ userId, id }`. Missing datasets or datasets belonging to another user return a generic 404 `NotFound` error without leaking existence.
+- **Server-Controlled S3 Key**: S3 key is strictly retrieved from verified DynamoDB metadata (`uploads/${userId}/...`), never accepted from client query/body input.
+- **Private S3 Storage**: Generates a short-lived presigned GET URL (60-second expiration). S3 bucket access remains 100% private and blocked from public access.
+- **S3 Object Validation**: Validates object existence via `HeadObjectCommand` before presigning, returning 404 if the underlying file was removed.
+
+### 3. Reopening with Live Analytics Recalculation
+- Clicking **Open Dataset** retrieves the short-lived presigned GET URL and downloads the CSV raw text directly from private S3.
+- Runs the raw CSV through `parseAndValidateCSV` and `computeDashboardAnalytics`.
+- Replaces active dashboard metrics, recalculating Total Revenue, Total Orders, Average Order Value, Monthly Revenue trend chart, Channel breakdown chart, and Transactions table.
+- Sets dataset source badge to `Saved to AWS Cloud`.
+- Duplicate clicks are prevented while an operation is in progress.
+
+### 4. Local Mode Preservation
+- When AWS configuration (`NEXT_PUBLIC_ENABLE_AWS_BACKEND="false"`) is disabled or absent:
+  - Zero AWS network requests are executed.
+  - Sample dataset, local CSV uploads, KPI calculations, Recharts trends, search, and CSV export remain 100% functional in browser memory.
+  - Sign-in is never required for local-only analytics.
+
+---
+
 ## 🔐 Environment & Security Guidelines
 
-- **Zero Cloud Deployment in Phase 4A**: Serverless infrastructure has been prepared locally and validated with unit tests; no cloud resources have been deployed.
-- **Client-Side Sandbox**: All CSV parsing currently occurs in the client browser memory. No files or rows are transmitted over the network without user configuration.
-- **Authentication Warning**: Endpoints in `backend/` are configured for development. An authorization layer (e.g. AWS Cognito User Pool) is required before deploying with production enterprise data.
-- **Secrets Management**: Copy `.env.example` to `.env.local` for local environment configuration. Never commit AWS secrets.
+### Required Environment Variables (`.env.local`)
+```ini
+# AWS Backend Integration Toggle
+NEXT_PUBLIC_ENABLE_AWS_BACKEND="false" # Set "true" to activate cloud history & uploads
+
+# API Gateway Endpoint (from SAM outputs)
+NEXT_PUBLIC_AWS_API_GATEWAY_URL="https://xxxxxxxxxx.execute-api.ap-south-1.amazonaws.com/Prod"
+
+# Amazon Cognito Configuration (from SAM outputs)
+NEXT_PUBLIC_AWS_REGION="ap-south-1"
+NEXT_PUBLIC_COGNITO_USER_POOL_ID="ap-south-1_xxxxxxxxx"
+NEXT_PUBLIC_COGNITO_CLIENT_ID="xxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+### Local Testing vs Live AWS Environment
+- **Fully Testable Locally**:
+  - All CSV parsing, RFC 4180 handling, column alias heuristics, and KPI math.
+  - Cognito in-memory storage, password validation, and auth state management.
+  - Mocked S3 Presigned POST, 10MB limit enforcement, and partial failure detection.
+  - Mocked Presigned GET download, 60s expiration handling, anti-IDOR checks, and analytics reopening.
+  - SAM CloudFormation template syntax and security rules.
+- **Requires Deployed AWS Environment for Live Verification**:
+  - Real Cognito user registration, live SMS/email verification codes, and SRP token issuance.
+  - Live API Gateway REST authorizer token validation.
+  - Real DynamoDB write/query throughput on `DatasetsTable`.
+  - Live Amazon S3 presigned multipart POST uploads and presigned GET browser downloads.

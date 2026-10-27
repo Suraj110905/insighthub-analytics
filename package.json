@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node scripts/test-analytics.mjs && node scripts/test-auth.mjs && node scripts/test-cloud-upload.mjs"
+    "test": "node scripts/test-analytics.mjs && node scripts/test-auth.mjs && node scripts/test-cloud-upload.mjs && node scripts/test-dataset-history.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",

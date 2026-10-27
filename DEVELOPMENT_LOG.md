@@ -168,5 +168,47 @@
   - Next.js Production Build: Compiled in 2.3s with 0 errors.
 - **Safety Compliance**: Zero AWS resources created, modified, or deployed. Zero commits made automatically.
 
+---
+
+### Phase 5C: Dataset History, Secure Downloads & Reopening (Current)
+- **Backend Protected Download Route**:
+  - Implemented `GET /datasets/{id}/download` in `backend/src/handlers/getDatasetDownloadUrl.js`.
+  - Added `GetDatasetDownloadUrlFunctionLogGroup` with explicit 14-day retention in `backend/template.yaml`.
+  - Configured `GetDatasetDownloadUrlFunction` with least-privilege `DynamoDBReadPolicy` on `DatasetsTable` and `S3ReadPolicy` on `CsvStorageBucket`.
+  - Protected with Amazon Cognito Authorizer; verifies `claims.sub`.
+  - Validates `id` format using `validateDatasetId`.
+  - Performs tenant-isolated DynamoDB lookup using composite key `{ userId: claims.sub, id }`.
+  - Anti-IDOR: Returns generic 404 `NotFound` for non-existent datasets or datasets owned by another user.
+  - Server-controlled S3 key: Obtains S3 key strictly from stored metadata (`uploads/${userId}/...`), rejecting client-supplied keys.
+  - Verifies object existence via S3 `HeadObjectCommand` before presigning, returning 404 if removed.
+  - Generates short-lived 60-second presigned GET URL via `@aws-sdk/s3-request-presigner`. S3 bucket remains 100% private.
+- **Frontend Client Integration (`lib/awsClient.js`)**:
+  - Exported `listUserDatasets(token)`: queries `GET /datasets` with Cognito ID Bearer token.
+  - Exported `getDatasetDownloadUrl(datasetId, token)`: calls `GET /datasets/{id}/download` with ID token.
+  - Exported `downloadDatasetCsv(downloadUrl)`: securely fetches raw CSV string with custom 403 (expired) and 404 (deleted) error mapping.
+  - Exported `downloadAndReopenDataset(dataset, token, onProgress)`: coordinates the 4-step pipeline (download presigned URL -> fetch S3 CSV -> parse CSV via `parseAndValidateCSV` -> compute analytics via `computeDashboardAnalytics` -> return dashboard dataset object labeled `isCloud: true`).
+  - Throws descriptive errors on network or parse failure, preventing false success states.
+- **Datasets Tab UI Integration (`app/page.js`)**:
+  - Integrated `useAuth` to load cloud datasets when user is authenticated and AWS backend is enabled.
+  - Rendered `AWS Cloud Saved Datasets` section with comprehensive states:
+    1. **Local Mode**: Informs user that cloud sync is disabled and local analytics are memory-only.
+    2. **Unauthenticated**: Prompts user to sign in with Cognito to view and reopen saved cloud datasets.
+    3. **Loading**: Renders animated spinner with clear loading message.
+    4. **Error**: Displays alert banner with retry action.
+    5. **Empty**: Shows empty state with direct action to upload first cloud dataset.
+    6. **Populated List**: Renders saved datasets with upload date, record count, and column count.
+  - Added **Open Dataset** action: downloads CSV, parses it, recalculates analytics, and updates dashboard.
+  - Prevents duplicate clicks during in-flight operations with loading state (`isOpening`).
+  - Clear source badge: `Saved to AWS Cloud` vs `Local Session`.
+  - Reopen feedback: Success banner with quick link to overview dashboard, or dismissible error notification.
+- **Local Mode Preservation**:
+  - Local CSV upload, sample dataset loading, KPI math, charts, search, and CSV export remain 100% functional without AWS credentials or Cognito configuration.
+- **Comprehensive Unit Testing**:
+  - Backend: Added `backend/tests/getDatasetDownloadUrl.test.mjs` (8 tests) and updated `backend/tests/templateValidation.test.mjs`. Total backend tests: 27/27 passing.
+  - Frontend: Added `scripts/test-dataset-history.mjs` (9 tests). Total frontend tests: 33/33 passing (8 analytics + 6 auth + 10 cloud upload + 9 dataset history).
+  - ESLint: 0 errors, 0 warnings.
+  - Next.js Production Build: Compiled in 2.5s with 0 errors.
+- **Safety Compliance**: Zero AWS resources created, modified, or deployed. Zero commits made automatically.
+
 
 

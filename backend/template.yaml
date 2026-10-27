@@ -211,6 +211,12 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-GetPresignedUrlFunction"
       RetentionInDays: 14
 
+  GetDatasetDownloadUrlFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-GetDatasetDownloadUrlFunction"
+      RetentionInDays: 14
+
   # ============================================================================
   # LAMBDA FUNCTIONS
   # ============================================================================
@@ -313,6 +319,28 @@ Resources:
             RestApiId: !Ref InsightHubApi
             Path: /datasets/presigned-url
             Method: POST
+
+  # 6. S3 Presigned GET Generator for Secure Download (Protected by Cognito Authorizer)
+  GetDatasetDownloadUrlFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: GetDatasetDownloadUrlFunctionLogGroup
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-GetDatasetDownloadUrlFunction"
+      CodeUri: src/
+      Handler: handlers/getDatasetDownloadUrl.handler
+      Description: Generates short-lived 60s presigned GET URL for downloading datasets with anti-IDOR checks
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DatasetsTable
+        - S3ReadPolicy:
+            BucketName: !Ref CsvStorageBucket
+      Events:
+        DownloadDatasetApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsightHubApi
+            Path: /datasets/{id}/download
+            Method: GET
 
 Outputs:
   ApiUrl:

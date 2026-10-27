@@ -41,6 +41,8 @@ test("SAM Template: structure and security rules validation", () => {
   assert.ok(content.includes("ListDatasetsFunctionLogGroup:"), "Must declare ListDatasetsFunctionLogGroup");
   assert.ok(content.includes("GetDatasetFunctionLogGroup:"), "Must declare GetDatasetFunctionLogGroup");
   assert.ok(content.includes("GetPresignedUrlFunctionLogGroup:"), "Must declare GetPresignedUrlFunctionLogGroup");
+  assert.ok(content.includes("GetDatasetDownloadUrlFunctionLogGroup:"), "Must declare GetDatasetDownloadUrlFunctionLogGroup");
+  assert.ok(content.includes("GetDatasetDownloadUrlFunction:"), "Must declare GetDatasetDownloadUrlFunction");
   assert.ok(content.includes("RetentionInDays: 14"), "Must configure 14 days retention in log groups");
 
   // 7. Cognito User Pool & User Pool Client
