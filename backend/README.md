@@ -29,6 +29,7 @@ This directory contains the production-ready AWS Serverless Application Model (S
                                                    ├── CreateDataset: POST /datasets (Protected)
                                                    ├── ListDatasets: GET /datasets (Protected)
                                                    ├── GetDataset: GET /datasets/{id} (Protected)
+                                                   ├── GetDatasetDownloadUrl: GET /datasets/{id}/download (Protected)
                                                    └── GetPresignedUrl: POST /datasets/presigned-url (Protected)
                                                           │
                                                           ├──► 🗄️ Amazon DynamoDB (DatasetsTable, On-Demand)
@@ -47,6 +48,7 @@ This directory contains the production-ready AWS Serverless Application Model (S
 | `/datasets` | `POST` | **Protected** | Validates & saves tenant-isolated dataset metadata | `{ name, rowCount, headers, metrics, s3Key }` | `201 Created` / `400 Bad Request` / `401 Unauthorized` |
 | `/datasets` | `GET` | **Protected** | Queries dataset records belonging strictly to caller | None | `200 OK` / `401 Unauthorized` |
 | `/datasets/{id}`| `GET` | **Protected** | Retrieves metadata for a single dataset (anti-IDOR) | None | `200 OK` / `404 Not Found` / `401 Unauthorized` |
+| `/datasets/{id}/download` | `GET` | **Protected** | Generates short-lived 60s presigned S3 GET URL (anti-IDOR) | None | `200 OK` / `404 Not Found` / `401 Unauthorized` |
 | `/datasets/presigned-url` | `POST` | **Protected** | Generates secure direct S3 upload POST policy | `{ filename, fileSizeBytes }` | `200 OK` / `400 Bad Request` / `401 Unauthorized` |
 
 ---
@@ -79,7 +81,7 @@ This directory contains the production-ready AWS Serverless Application Model (S
    - S3 objects are isolated to user-scoped prefixes: `uploads/${userId}/${uploadId}/${filename}`.
 
 4. **CloudWatch Log Retention (Cost Control)**:
-   - Explicit `AWS::Logs::LogGroup` resources declared for each of the 5 Lambda functions.
+   - Explicit `AWS::Logs::LogGroup` resources declared for each of the 6 Lambda functions.
    - `RetentionInDays: 14` avoids default indefinite retention and prevents unmanaged log storage charges.
 
 5. **Private S3 Storage & Encryption**:
@@ -102,13 +104,14 @@ cd backend
 npm test
 ```
 
-### Verified Test Suites (19 Tests Passing):
+### Verified Test Suites (27 Tests Passing):
 - `HealthHandler`: Public access, status, version, and CORS headers.
 - `CreateDatasetHandler`: Authentication requirement (401), validation rules (400), user-scoped S3 key validation, composite key (`userId`, `id`) DynamoDB storage (201).
 - `ListDatasetsHandler`: Authentication requirement (401), QueryCommand isolation by `userId` (200).
 - `GetDatasetHandler`: Authentication requirement (401), missing ID (400), invalid ID format (400), anti-IDOR cross-user access denial (404), successful retrieval (200).
+- `GetDatasetDownloadUrlHandler`: Authentication requirement (401), invalid ID (400), anti-IDOR cross-user access denial (404), missing s3Key (404), tenant prefix violation (404), S3 object not found (404), 60s short-lived presigned GET generation (200).
 - `PresignedUrlHandler`: Authentication requirement (401), rejection of non-CSV extensions (400), unsupported content type (400), rejection of >10MB files (400), S3 presigned POST policy generation with `content-length-range: [1, 10485760]` and user prefix scoping (200).
-- `TemplateValidation`: CloudWatch 14-day retention for all 5 Lambdas, Cognito UserPool and Client configuration, API Gateway authorizer, composite DynamoDB keys, Node 24 runtime, ARM64 architecture, S3 public block, and zero EC2/credentials.
+- `TemplateValidation`: CloudWatch 14-day retention for all 6 Lambdas, Cognito UserPool and Client configuration, API Gateway authorizer, composite DynamoDB keys, Node 24 runtime, ARM64 architecture, S3 public block, and zero EC2/credentials.
 
 ---
 
