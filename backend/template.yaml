@@ -1,0 +1,237 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  InsightHub Serverless Backend
+  Minimal business analytics backend using AWS Lambda, API Gateway, DynamoDB, and Amazon S3.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment stage environment identifier
+
+  FrontendOrigin:
+    Type: String
+    Default: http://localhost:3000
+    Description: Allowed origin domain for API Gateway and S3 CORS (e.g. https://your-amplify-domain.amplifyapp.com)
+
+  PresignedUrlExpirySeconds:
+    Type: Number
+    Default: 900
+    MinValue: 60
+    MaxValue: 3600
+    Description: S3 Presigned URL expiration duration in seconds (default 15 minutes)
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 15
+    MemorySize: 256
+    Architectures:
+      - arm64
+    Environment:
+      Variables:
+        DATASETS_TABLE_NAME: !Ref DatasetsTable
+        S3_BUCKET_NAME: !Ref CsvStorageBucket
+        FRONTEND_ORIGIN: !Ref FrontendOrigin
+        PRESIGNED_URL_EXPIRY: !Ref PresignedUrlExpirySeconds
+        NODE_OPTIONS: "--enable-source-maps"
+
+Resources:
+  # ============================================================================
+  # API GATEWAY REST API
+  # ============================================================================
+  InsightHubApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: !Sub "'${FrontendOrigin}'"
+        MaxAge: "'3600'"
+
+  # ============================================================================
+  # DYNAMODB TABLE - METADATA STORAGE
+  # ============================================================================
+  DatasetsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-Datasets"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+      Tags:
+        - Key: Project
+          Value: InsightHub
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ============================================================================
+  # S3 BUCKET - RAW CSV STORAGE
+  # ============================================================================
+  CsvStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      # Omit BucketName so CloudFormation generates a collision-free global name
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldUploads
+            Status: Enabled
+            ExpirationInDays: 90
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - PUT
+              - GET
+            AllowedOrigins:
+              - !Ref FrontendOrigin
+            MaxAge: 3000
+      Tags:
+        - Key: Project
+          Value: InsightHub
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ============================================================================
+  # LAMBDA FUNCTIONS
+  # ============================================================================
+
+  # 1. Health Check
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/health.handler
+      Description: Simple service health check endpoint
+      Events:
+        HealthApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsightHubApi
+            Path: /health
+            Method: GET
+
+  # 2. Create Dataset Metadata
+  CreateDatasetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/createDataset.handler
+      Description: Validates and stores dataset metadata summary in DynamoDB
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DatasetsTable
+      Events:
+        CreateDatasetApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsightHubApi
+            Path: /datasets
+            Method: POST
+
+  # 3. List Datasets Metadata
+  ListDatasetsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/listDatasets.handler
+      Description: Lists stored dataset metadata records
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DatasetsTable
+      Events:
+        ListDatasetsApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsightHubApi
+            Path: /datasets
+            Method: GET
+
+  # 4. Get Single Dataset Metadata
+  GetDatasetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/getDataset.handler
+      Description: Retrieves metadata for a single dataset by ID
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DatasetsTable
+      Events:
+        GetDatasetApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsightHubApi
+            Path: /datasets/{id}
+            Method: GET
+
+  # 5. S3 Presigned URL Generator
+  GetPresignedUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/getPresignedUrl.handler
+      Description: Generates a secure S3 presigned PUT URL for direct browser-to-S3 CSV upload
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref CsvStorageBucket
+      Events:
+        PresignedUrlApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsightHubApi
+            Path: /datasets/presigned-url
+            Method: POST
+
+Outputs:
+  ApiUrl:
+    Description: Base REST API Gateway endpoint URL
+    Value: !Sub "https://${InsightHubApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiUrl"
+
+  DatasetsTableName:
+    Description: Name of the DynamoDB table storing dataset metadata
+    Value: !Ref DatasetsTable
+    Export:
+      Name: !Sub "${AWS::StackName}-DatasetsTable"
+
+  DatasetsTableArn:
+    Description: ARN of the DynamoDB table
+    Value: !GetAtt DatasetsTable.Arn
+
+  CsvStorageBucketName:
+    Description: Name of the private S3 bucket for CSV storage
+    Value: !Ref CsvStorageBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-CsvStorageBucket"
+
+  CsvStorageBucketArn:
+    Description: ARN of the S3 storage bucket
+    Value: !GetAtt CsvStorageBucket.Arn

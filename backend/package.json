@@ -1,0 +1,16 @@
+{
+  "name": "insighthub-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "InsightHub Serverless Backend on AWS SAM (Lambda, API Gateway, DynamoDB, S3)",
+  "scripts": {
+    "test": "node --test tests/**/*.test.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.758.0",
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/lib-dynamodb": "^3.758.0",
+    "@aws-sdk/s3-request-presigner": "^3.758.0"
+  }
+}

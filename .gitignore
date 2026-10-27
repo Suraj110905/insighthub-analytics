@@ -22,11 +22,14 @@
 .env.production.local
 !.env.example
 
-# AWS credentials, keys & Amplify local metadata
+# AWS credentials, keys, Amplify & SAM build artifacts
 *.pem
 *.key
 .aws/
 credentials
+.aws-sam/
+samconfig.toml
+!samconfig.toml.example
 amplify/.config/local-*
 amplify/backend/amplify-meta.json
 amplify/backend/awscloudformation/

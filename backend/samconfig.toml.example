@@ -1,0 +1,34 @@
+# ==============================================================================
+# InsightHub SAM Deployment Configuration Example (samconfig.toml.example)
+#
+# IMPORTANT:
+# - This is a template configuration file.
+# - To use with SAM CLI, copy this file to `samconfig.toml` (which is ignored by Git).
+# - Do NOT commit real account IDs, credentials, or secrets to Git.
+# ==============================================================================
+
+version = 0.1
+
+[default]
+[default.global.parameters]
+stack_name = "insighthub-backend-dev"
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.validate.parameters]
+lint = true
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+s3_prefix = "insighthub-backend"
+region = "us-east-1"
+parameter_overrides = [
+  "Environment=\"dev\"",
+  "FrontendOrigin=\"http://localhost:3000\"",
+  "PresignedUrlExpirySeconds=900"
+]
+image_repositories = []

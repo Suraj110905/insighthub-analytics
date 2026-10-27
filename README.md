@@ -21,14 +21,14 @@ The system is structured as a modern web application designed for seamless serve
    ├── 🎨 Dashboard Components (MetricCard, RevenueChart, ChannelChart, TransactionsTable)
    └── 🌐 Next.js Pages & Layouts (app/layout.js, app/page.js)
    │
-   ▼ (Future Cloud Services - Phase 4+)
-🌐 AWS API Gateway (REST Endpoints)
+   ▼ (Prepared AWS SAM Backend - Phase 4A)
+🌐 Amazon API Gateway (REST Endpoints: /health, /datasets, /datasets/{id}, /datasets/presigned-url)
    │
    ▼
-⚡ AWS Lambda (Serverless Compute Functions)
+⚡ AWS Lambda Handlers (Node.js 20.x, ARM64)
    │
-   ├── 🗄️ Amazon DynamoDB (Persistent metrics, query history)
-   └── 💾 Amazon S3 (Raw business CSV file storage)
+   ├── 🗄️ Amazon DynamoDB (DatasetsTable, On-Demand billing)
+   └── 💾 Amazon S3 (CsvStorageBucket, Private Encrypted, 90-day lifecycle)
 ```
 
 ---
@@ -42,6 +42,16 @@ insighthub/
 │   ├── globals.css       # Global CSS with Tailwind v4 setup & custom tokens
 │   ├── layout.js         # Root HTML layout and metadata wrapper
 │   └── page.js           # Interactive Phase 3 dashboard with dynamic CSV engine
+├── backend/              # AWS Serverless Application Model (SAM) Backend (Phase 4A)
+│   ├── src/
+│   │   ├── handlers/     # Lambda handlers (health, createDataset, listDatasets, getDataset, getPresignedUrl)
+│   │   ├── utils/        # Response helpers and CORS configuration
+│   │   └── validators/   # Strict dataset metadata and file upload validators
+│   ├── tests/            # Zero-dependency backend test suite (12 tests)
+│   ├── package.json      # Backend AWS SDK dependencies
+│   ├── samconfig.toml.example # Example non-secret SAM deploy configuration
+│   ├── template.yaml     # SAM CloudFormation serverless infrastructure template
+│   └── README.md         # Dedicated backend architecture and deployment guide
 ├── components/           # Reusable UI elements
 │   ├── Sidebar.js        # Responsive navigation drawer (Overview, Datasets, Reports, Settings)
 │   ├── Header.js         # Header with breadcrumbs, search, notification popover & profile
@@ -59,7 +69,7 @@ insighthub/
 ├── scripts/              # Automated verification and tests
 │   └── test-analytics.mjs # Unit tests for CSV parsing, column mapping, and KPI formulas
 ├── .env.example          # Environment variable template with security guidelines
-├── .gitignore            # Git exclusion rules (protects credentials & outputs)
+├── .gitignore            # Git exclusion rules (protects credentials, SAM artifacts & outputs)
 ├── DEVELOPMENT_LOG.md    # Log of tasks completed, testing results, and issues
 ├── jsconfig.json         # Path aliases configuration (@/*)
 ├── next.config.mjs       # Next.js configuration (JavaScript, Turbopack root)
@@ -97,9 +107,8 @@ InsightHub uses flexible, case-insensitive heuristic detection to automatically 
 | **Charts** | Recharts | Interactive SVG area charts and bar charts |
 | **Icons** | Lucide React | Clean, lightweight UI icons |
 | **Testing** | Node.js Test Runner (`node:test`) | Native, zero-dependency unit tests for parsing and KPIs |
-| **Backend (Target)** | AWS API Gateway & Lambda | Serverless API computation |
-| **Storage (Target)** | Amazon DynamoDB & S3 | Key-value metric store and CSV file repository |
-| **Hosting (Target)** | AWS Amplify Hosting | Continuous frontend deployment |
+| **Backend (Prepared)** | AWS SAM, Lambda (Node 20), API Gateway | Serverless REST APIs with CORS |
+| **Storage (Prepared)** | Amazon DynamoDB & S3 | On-Demand metadata store & private encrypted S3 bucket |
 
 ---
 
@@ -126,6 +135,7 @@ Make sure the following tools are installed on your computer:
 3. **Run unit tests:**
    ```bash
    npm test
+   cd backend && npm test && cd ..
    ```
 
 4. **Start the development server:**
@@ -138,19 +148,9 @@ Make sure the following tools are installed on your computer:
 
 ---
 
-## 🧪 Testing the CSV Upload in Your Browser
-
-1. Click **Upload Dataset** or navigate to the **Datasets** page.
-2. Click **Load Sample Dataset** to immediately test the built-in 22-record CSV file, or drag and drop your own `.csv`.
-3. Notice that all 4 KPI cards, both charts, and the transaction table refresh instantly with computed values.
-4. Try filtering transactions using the table search box or status dropdown.
-5. Click **Export CSV** in the table header to download filtered records.
-6. Click **Reset to Sample** in the top banner to return to baseline mode.
-
----
-
 ## 🔐 Environment & Security Guidelines
 
-- **Client-Side Sandbox**: All CSV parsing occurs in the client browser memory. No files or rows are transmitted over the network.
-- **XSS Prevention**: Table cells and labels are sanitized and rendered as React text nodes, preventing injection attacks.
+- **Zero Cloud Deployment in Phase 4A**: Serverless infrastructure has been prepared locally and validated with unit tests; no cloud resources have been deployed.
+- **Client-Side Sandbox**: All CSV parsing currently occurs in the client browser memory. No files or rows are transmitted over the network without user configuration.
+- **Authentication Warning**: Endpoints in `backend/` are configured for development. An authorization layer (e.g. AWS Cognito User Pool) is required before deploying with production enterprise data.
 - **Secrets Management**: Copy `.env.example` to `.env.local` for local environment configuration. Never commit AWS secrets.

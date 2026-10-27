@@ -25,7 +25,8 @@
 ## 📅 Phase 2: Professional Dashboard UI & Layout (2026-10-28)
 
 ### ✅ Completed Tasks
-- [x] Created responsive `Sidebar.js` navigation with branding, active states, and mobile backdrop drawer.
+- [x] Created responsive `Sidebar.js` navigation with branding, active states, and mobile backdrop drawer:
+  - Overview, Datasets (tagged Phase 3), Reports, Settings.
 - [x] Created sticky `Header.js` with breadcrumbs, functional search filter input, notification bell with popover, and user profile badge.
 - [x] Built 4 business KPI cards (`MetricCard.js`): Total Revenue, Total Orders, Conversion Rate, Average Order Value.
 - [x] Implemented `RevenueChart.js` with Recharts `AreaChart` (interactive Monthly Revenue vs Orders toggle).
@@ -50,48 +51,56 @@
   - Validates row consistency, skips empty rows, and surfaces parsing warnings without crashing.
   - Rejects empty and whitespace-only files with clear feedback.
 - [x] Built dynamic business analytics engine in `lib/analytics.js`:
-  - Detects semantic column aliases:
-    - Revenue: `revenue`, `sales`, `amount`, `total`, `price`, `ordervalue`
-    - Date: `date`, `order_date`, `transaction_date`, `created_at`
-    - Category: `channel`, `category`, `product_category`, `source`
-    - Order ID: `order_id`, `orderid`, `transaction_id`, `id`
-    - Status: `status`, `order_status`, `payment_status`
-    - Customer: `customer`, `customer_name`, `client`, `company`
-    - Conversion data: `visitors`, `sessions`, `traffic`, `conversions`
-  - Total Revenue: sums verified numeric amounts without silently treating bad strings as 0.
-  - Total Orders: deduplicates order IDs if present, or counts valid transaction rows.
-  - Average Order Value: dynamically computes `revenue / orders`.
-  - Conversion Rate: safely displays `N/A` with informative label when session data is absent; calculates rate if visitor data is provided.
-  - Chronological time-series revenue grouping by month for `RevenueChart`.
+  - Detects semantic column aliases: Revenue, Date, Category/Channel, Order ID, Status, Customer, Visitors/Conversions.
+  - Calculates Total Revenue, unique Total Orders, AOV, and Conversion Rate (or "N/A" if visitor data absent).
+  - Time-series monthly revenue aggregation for `RevenueChart`.
   - Segment breakdown grouping for `ChannelChart`.
-  - Record formatting and filtering for `TransactionsTable`.
   - Client-side CSV export generator `exportRecordsToCSV`.
-- [x] Enhanced `components/UploadModal.js`:
-  - Drag-and-drop dropzone with file type validation (`.csv`).
-  - Live preview showing parsed filename, valid records, skipped records, and mapped columns.
-  - 1-click "Load Sample Dataset" feature for immediate assessment review.
-  - Option to replace or reset active dataset.
+- [x] Enhanced `components/UploadModal.js` with drag-and-drop, sample loader, and live column mapping preview.
 - [x] Created downloadable template dataset `public/sample-business-data.csv` (22 records across 10 months).
-- [x] Connected shared dataset state in `app/page.js`:
-  - Baseline sample mode when no file is uploaded.
-  - Dynamic dataset mode when file is uploaded, updating all 4 KPI cards, charts, and table.
-  - Banner indicating active dataset and "Reset to Sample" action.
-  - Table filtered record CSV export.
-- [x] Created unit test suite in `scripts/test-analytics.mjs` covering 8 core scenarios:
-  1. RFC 4180 quotes, commas, escapes.
-  2. Column alias resolution.
-  3. Missing required columns handling.
-  4. Safe numeric parsing (no silent zero conversions).
-  5. Order ID deduplication.
-  6. Empty and whitespace file rejection.
-  7. Duplicate and empty header renaming.
-  8. CSV export record formatting.
+- [x] Connected shared dataset state in `app/page.js` with sample baseline fallback and active dataset banners.
+- [x] Created automated unit test suite in `scripts/test-analytics.mjs` (8/8 tests passing).
 
 ### 🧪 Test Results
-- Unit Tests: `npm test` executed 8/8 tests with **8 passing, 0 failing** (35ms duration).
+- Unit Tests: `npm test` executed 8/8 tests with **8 passing, 0 failing**.
 - ESLint: `npm run lint` passed with **0 errors and 0 warnings**.
 - Production Build: `npm run build` compiled in 2.3s with **0 errors**.
 
-### ⚠️ Known Limitations
-- Processing is 100% in-browser; files larger than ~50MB may cause browser memory pressure.
-- Cloud storage (S3), serverless persistence (DynamoDB), and remote API endpoints (Lambda/API Gateway) are deferred to future cloud phases.
+---
+
+## 📅 Phase 4A: Prepare AWS Serverless Backend (No Deployment) (2026-10-28)
+
+### ✅ Completed Tasks
+- [x] Created standalone `backend/` directory structured for AWS SAM:
+  - `template.yaml`: Full CloudFormation & SAM serverless specification.
+  - `samconfig.toml.example`: Non-secret deployment configuration template.
+  - `backend/package.json`: Configured with AWS SDK v3 dependencies and test scripts.
+- [x] Implemented 5 serverless Lambda handlers in `backend/src/handlers/`:
+  - `health.js`: `GET /health` service health check with CORS headers.
+  - `createDataset.js`: `POST /datasets` metadata validation and DynamoDB storage.
+  - `listDatasets.js`: `GET /datasets` DynamoDB scan returning recent datasets.
+  - `getDataset.js`: `GET /datasets/{id}` single dataset retrieval with 404 handling.
+  - `getPresignedUrl.js`: `POST /datasets/presigned-url` secure S3 PUT presigned URL generator.
+- [x] Built utilities and validators in `backend/src/`:
+  - `utils/response.js`: Standardized API Gateway proxy responses and CORS headers.
+  - `validators/datasetValidator.js`: Strict validation for metadata, safe filenames, and 10MB limits.
+- [x] Applied storage & security best practices:
+  - DynamoDB table configured with `PAY_PER_REQUEST` on-demand billing (zero fixed costs).
+  - Private S3 bucket with all 4 `BlockPublicAccess` flags enabled and default `AES256` encryption.
+  - S3 lifecycle rule expiring temporary uploads after 90 days.
+  - Heavy raw CSV files upload directly to S3 via presigned URLs (never routed through Lambda memory).
+  - Zero hardcoded secrets, credentials, or AWS account IDs.
+  - Strict constraint verified: **NO EC2 resources created**.
+- [x] Created automated backend unit test suite in `backend/tests/` (12 tests covering handlers, validation, error paths, and SAM template structure).
+- [x] Preserved existing Next.js frontend functionality completely intact.
+
+### 🧪 Test Results
+- Backend Unit Tests: `cd backend && npm test` executed 12/12 tests with **12 passing, 0 failing** (276ms).
+- Frontend Unit Tests: `npm test` executed 8/8 tests with **8 passing, 0 failing**.
+- Frontend ESLint: `npm run lint` passed with **0 errors and 0 warnings**.
+- Frontend Build: `npm run build` compiled in 735ms with **0 errors**.
+
+### ⚠️ Security Limitations & Important Notes
+- **Deployment Status**: Backend code is **prepared locally only**; **NO deployment has been performed**, respecting strict project constraints.
+- **Authentication**: Endpoints currently do not enforce Cognito/OAuth authentication. An API Gateway Lambda Authorizer or Cognito User Pool is **mandatory** before deploying to production with real enterprise data.
+- **Client Independence**: Frontend remains 100% operational in client-side mode without requiring backend connectivity.
