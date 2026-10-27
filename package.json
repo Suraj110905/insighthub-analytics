@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node scripts/test-analytics.mjs"
+    "test": "node scripts/test-analytics.mjs && node scripts/test-auth.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "amazon-cognito-identity-js": "^6.3.22",
     "lucide-react": "^1.62.0",
     "next": "16.4.3",
     "papaparse": "^5.7.0",

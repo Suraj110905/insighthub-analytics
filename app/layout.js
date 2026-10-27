@@ -1,4 +1,5 @@
 import "./globals.css";
+import ClientProviders from "@/components/ClientProviders";
 
 export const metadata = {
   title: "InsightHub | Business Analytics & Insights",
@@ -9,7 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
-        {children}
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

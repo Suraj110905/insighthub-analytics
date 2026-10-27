@@ -1,16 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Bell, Menu, Check } from "lucide-react";
+import { Search, Bell, Menu, Check, LogIn, LogOut, ShieldCheck } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
 
-export default function Header({ pageTitle = "Overview", onToggleSidebar, onSearch, searchQuery = "" }) {
+export default function Header({
+  pageTitle = "Overview",
+  onToggleSidebar,
+  onSearch,
+  searchQuery = "",
+}) {
   const [showNotifications, setShowNotifications] = useState(false);
+  const { user, isAuthenticated, isConfigured, openAuthModal, signOut } = useAuth();
 
   const notifications = [
     { id: 1, title: "October Dataset uploaded", time: "2 hours ago", unread: true },
     { id: 2, title: "Monthly revenue target exceeded", time: "1 day ago", unread: false },
     { id: 3, title: "DynamoDB sync pipeline verified", time: "2 days ago", unread: false },
   ];
+
+  // Derive initials from user email if logged in
+  const userInitials = user?.email
+    ? user.email.slice(0, 2).toUpperCase()
+    : "GU";
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -36,10 +48,10 @@ export default function Header({ pageTitle = "Overview", onToggleSidebar, onSear
         </div>
       </div>
 
-      {/* Right Area: Search, Notifications & Profile */}
+      {/* Right Area: Search, Notifications & Auth / Profile */}
       <div className="flex items-center gap-3 sm:gap-4">
         {/* Search Field */}
-        <div className="relative hidden md:block w-64 lg:w-72">
+        <div className="relative hidden md:block w-56 lg:w-64">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -86,19 +98,50 @@ export default function Header({ pageTitle = "Overview", onToggleSidebar, onSear
           )}
         </div>
 
-        {/* User Profile Area */}
-        <div className="flex items-center gap-3 pl-2 sm:pl-3 border-l border-slate-200">
-          <div className="w-9 h-9 rounded-full bg-teal-700 text-white flex items-center justify-center font-semibold text-xs shadow-xs">
-            AM
-          </div>
-          <div className="hidden sm:block text-left">
-            <span className="text-xs font-semibold text-slate-800 block leading-tight">
-              Alex Morgan
-            </span>
-            <span className="text-[11px] text-slate-500 block leading-tight">
-              Business Ops
-            </span>
-          </div>
+        {/* Authentication State & Actions */}
+        <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-slate-200">
+          {isAuthenticated ? (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-teal-700 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                {userInitials}
+              </div>
+              <div className="hidden sm:block text-left max-w-[130px]">
+                <span
+                  className="text-xs font-semibold text-slate-800 block leading-tight truncate"
+                  title={user?.email}
+                >
+                  {user?.email}
+                </span>
+                <span className="text-[10px] text-teal-700 font-medium flex items-center gap-1 leading-tight">
+                  <ShieldCheck className="w-3 h-3 text-teal-600" />
+                  Cognito Verified
+                </span>
+              </div>
+              <button
+                onClick={signOut}
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                title="Sign Out"
+                aria-label="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              {!isConfigured && (
+                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                  Local Mode
+                </span>
+              )}
+              <button
+                onClick={openAuthModal}
+                className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

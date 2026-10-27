@@ -62,8 +62,10 @@ insighthub/
 │   ├── template.yaml     # SAM CloudFormation serverless infrastructure template
 │   └── README.md         # Dedicated backend architecture and deployment guide
 ├── components/           # Reusable UI elements
+│   ├── AuthModal.js      # Branded modal for Cognito Sign-In, Sign-Up & Email Confirmation
+│   ├── ClientProviders.js# Client wrapper for AuthProvider and AuthModal
 │   ├── Sidebar.js        # Responsive navigation drawer (Overview, Datasets, Reports, Settings)
-│   ├── Header.js         # Header with breadcrumbs, search, notification popover & profile
+│   ├── Header.js         # Header with breadcrumbs, search, notification popover & Cognito auth status
 │   ├── MetricCard.js     # Modular business KPI cards with trend indicators
 │   ├── RevenueChart.js   # Recharts AreaChart for monthly revenue & order volume
 │   ├── ChannelChart.js   # Recharts BarChart for acquisition channel distribution
@@ -71,12 +73,17 @@ insighthub/
 │   └── UploadModal.js    # Interactive CSV upload modal with drag-and-drop & live validation
 ├── lib/                  # Business logic and helper functions
 │   ├── analytics.js      # Dynamic analytics engine, column mapping, and metric calculations
+│   ├── AuthContext.js    # Client session manager with SRP authentication via amazon-cognito-identity-js
+│   ├── awsClient.js      # S3 presigned POST & API Gateway Bearer token caller
+│   ├── cognitoStorage.js # In-memory RAM storage adapter (avoids localStorage/sessionStorage XSS token risk)
 │   ├── csvParser.js      # RFC 4180 compliant CSV parser and header normalization
 │   └── useIsClient.js    # Client-side hydration hook (avoids cascading render warnings)
 ├── public/               # Static assets & sample data
 │   └── sample-business-data.csv # Built-in template dataset for 1-click testing
 ├── scripts/              # Automated verification and tests
-│   └── test-analytics.mjs # Unit tests for CSV parsing, column mapping, and KPI formulas
+│   ├── test-analytics.mjs# Unit tests for CSV parsing, column mapping, and KPI formulas
+│   └── test-auth.mjs     # Unit tests for in-memory storage, token safety & Cognito validation
+
 ├── .env.example          # Environment variable template with security guidelines
 ├── .gitignore            # Git exclusion rules (protects credentials, SAM artifacts & outputs)
 ├── DEVELOPMENT_LOG.md    # Log of tasks completed, testing results, and issues
