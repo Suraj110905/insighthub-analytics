@@ -14,7 +14,7 @@ This directory contains the production-ready AWS Serverless Application Model (S
    ├── [REST API Calls with CORS] ──► 🌐 Amazon API Gateway (RestApi)
                                               │
                                               ▼
-                                    ⚡ AWS Lambda Handlers (Node.js 20.x, ARM64)
+                                    ⚡ AWS Lambda Handlers (Node.js 24.x, ARM64)
                                        ├── HealthCheck: GET /health
                                        ├── CreateDataset: POST /datasets
                                        ├── ListDatasets: GET /datasets
@@ -57,8 +57,9 @@ This directory contains the production-ready AWS Serverless Application Model (S
    - No administrative or wildcard IAM permissions.
 5. **No Hardcoded Secrets**:
    - No AWS account IDs, access keys, or secret keys exist in template or source code.
-6. **Authentication Notice**:
-   - ⚠️ This backend is prepared for local prototyping and development. An authentication layer (such as AWS Cognito User Pools or API Gateway Lambda Authorizer) is **required** before production deployment with sensitive multi-tenant data.
+6. **⚠️ Authentication Notice**:
+   - **Authentication is not yet implemented.**
+   - This API must **not** be exposed to sensitive production or enterprise data until suitable authorization (such as AWS Cognito User Pools or an API Gateway Lambda Authorizer) is explicitly integrated.
 
 ---
 
@@ -77,7 +78,7 @@ npm test
 - `ListDatasetsHandler`: Table scan mapping and item count.
 - `GetDatasetHandler`: 400 on missing ID, 404 on non-existent record, 200 on success.
 - `PresignedUrlHandler`: Rejection of non-CSV extensions, rejection of >10MB files, valid presigned URL generation.
-- `TemplateValidation`: SAM structure, on-demand billing, encryption, S3 public access block, no EC2 resources, no hardcoded secrets.
+- `TemplateValidation`: SAM structure, Node 24 runtime, ARM64 architecture, on-demand billing, encryption, S3 public access block, no EC2 resources, no hardcoded secrets.
 
 ---
 
@@ -97,15 +98,15 @@ cd backend
 # 2. Build the serverless application artifacts
 sam build
 
-# 3. Deploy interactively (guided)
+# 3. Deploy interactively (guided) to ap-south-1 (Mumbai)
 sam deploy --guided
 ```
 
 ### Guided Prompts & Suggested Values:
 - **Stack Name**: `insighthub-backend-dev`
-- **AWS Region**: `us-east-1` (or your preferred region)
+- **AWS Region**: `ap-south-1` (Mumbai)
 - **Parameter Environment**: `dev`
-- **Parameter FrontendOrigin**: `http://localhost:3000` (or your production domain)
+- **Parameter FrontendOrigin**: `http://localhost:3000` (or your Amplify hosting domain)
 - **Confirm changes before deploy**: `Y`
 - **Allow SAM CLI IAM role creation**: `Y`
 - **Save arguments to configuration file**: `Y` (saves to `samconfig.toml`)

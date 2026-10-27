@@ -92,10 +92,12 @@
   - Zero hardcoded secrets, credentials, or AWS account IDs.
   - Strict constraint verified: **NO EC2 resources created**.
 - [x] Created automated backend unit test suite in `backend/tests/` (12 tests covering handlers, validation, error paths, and SAM template structure).
+- [x] Standardized Lambda runtime to `nodejs24.x` with `arm64` architecture.
+- [x] Standardized default AWS deployment region to `ap-south-1` (Mumbai) across `samconfig.toml.example`, `.env.example`, and documentation.
 - [x] Preserved existing Next.js frontend functionality completely intact.
 
 ### 🧪 Test Results
-- Backend Unit Tests: `cd backend && npm test` executed 12/12 tests with **12 passing, 0 failing** (276ms).
+- Backend Unit Tests: `cd backend && npm test` executed 12/12 tests with **12 passing, 0 failing** (265ms).
 - Frontend Unit Tests: `npm test` executed 8/8 tests with **8 passing, 0 failing**.
 - Frontend ESLint: `npm run lint` passed with **0 errors and 0 warnings**.
 - Frontend Build: `npm run build` compiled in 735ms with **0 errors**.

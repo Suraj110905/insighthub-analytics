@@ -22,10 +22,10 @@ The system is structured as a modern web application designed for seamless serve
    └── 🌐 Next.js Pages & Layouts (app/layout.js, app/page.js)
    │
    ▼ (Prepared AWS SAM Backend - Phase 4A)
-🌐 Amazon API Gateway (REST Endpoints: /health, /datasets, /datasets/{id}, /datasets/presigned-url)
+🌐 Amazon API Gateway (REST Endpoints in ap-south-1: /health, /datasets, /datasets/{id}, /datasets/presigned-url)
    │
    ▼
-⚡ AWS Lambda Handlers (Node.js 20.x, ARM64)
+⚡ AWS Lambda Handlers (Node.js 24.x, ARM64)
    │
    ├── 🗄️ Amazon DynamoDB (DatasetsTable, On-Demand billing)
    └── 💾 Amazon S3 (CsvStorageBucket, Private Encrypted, 90-day lifecycle)
@@ -107,7 +107,7 @@ InsightHub uses flexible, case-insensitive heuristic detection to automatically 
 | **Charts** | Recharts | Interactive SVG area charts and bar charts |
 | **Icons** | Lucide React | Clean, lightweight UI icons |
 | **Testing** | Node.js Test Runner (`node:test`) | Native, zero-dependency unit tests for parsing and KPIs |
-| **Backend (Prepared)** | AWS SAM, Lambda (Node 20), API Gateway | Serverless REST APIs with CORS |
+| **Backend (Prepared)** | AWS SAM, Lambda (Node.js 24.x, ARM64), API Gateway (ap-south-1) | Serverless REST APIs with CORS |
 | **Storage (Prepared)** | Amazon DynamoDB & S3 | On-Demand metadata store & private encrypted S3 bucket |
 
 ---

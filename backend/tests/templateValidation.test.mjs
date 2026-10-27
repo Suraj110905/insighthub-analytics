@@ -42,4 +42,8 @@ test("SAM Template: structure and security rules validation", () => {
   assert.ok(content.includes("ApiUrl:"), "Must export ApiUrl");
   assert.ok(content.includes("DatasetsTableName:"), "Must export DatasetsTableName");
   assert.ok(content.includes("CsvStorageBucketName:"), "Must export CsvStorageBucketName");
+
+  // 8. Runtime & Architecture
+  assert.ok(content.includes("Runtime: nodejs24.x"), "Must configure nodejs24.x runtime in Globals");
+  assert.ok(content.includes("- arm64"), "Must configure arm64 architecture in Globals");
 });
