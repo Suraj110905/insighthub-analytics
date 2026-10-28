@@ -43,3 +43,17 @@ yarn-error.log*
 # OS Files
 .DS_Store
 Thumbs.db
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+.next/
+out/
+.aws-sam/build/
+
+# Local and sensitive AWS configuration
+.aws/
+.aws-sam/
